@@ -1,0 +1,5 @@
+{"t": 321.1, "spend_usd": 0.72, "event": "vllm_ready"}
+{"t": 321.8, "spend_usd": 0.72, "event": "trainer_ready", "trainable_params": 79691776}
+{"t": 630.1, "spend_usd": 1.42, "event": "eval", "tag": "reeval_base", "adapter": null, "pct_of_record": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 4.6, 5.0, 6.6, 17.7, 18.1, 23.0, 43.7, 54.4], "mean": 10.8, "median": 4.6, "best": 54.4, "invalid": 2, "statuses": ["finished", "time", "time", "time", "time", "time", "time", "time", "time", "length", "time", "time", "time", "time", "finished", "time"]}
+{"t": 630.8, "spend_usd": 1.42, "event": "eval", "tag": "reeval_trained", "adapter": "resume", "pct_of_record": [0.0, 0.0, 0.0, 0.4, 0.8, 2.6, 4.4, 27.5, 28.9, 53.5, 53.9, 54.3, 60.0, 62.4, 64.0, 68.0], "mean": 30.0, "median": 28.9, "best": 68.0, "invalid": 3, "statuses": ["time", "time", "time", "time", "time", "time", "time", "time", "time", "finished", "time", "finished", "time", "time", "time", "time"]}
+{"t": 631.6, "spend_usd": 1.42, "event": "done", "final_adapter": "resume"}

@@ -1,0 +1,3 @@
+{"t": 357.2, "spend_usd": 0.75, "event": "vllm_ready"}
+{"t": 359.4, "spend_usd": 0.76, "event": "trainer_ready", "trainable_params": 79691776}
+{"t": 668.3, "spend_usd": 1.41, "event": "eval", "tag": "eval_base", "adapter": null, "pct_of_record": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.4, 6.0, 10.6, 12.5, 23.4, 29.0, 33.4, 41.7, 57.2, 63.3], "mean": 17.4, "median": 10.6, "best": 63.3, "invalid": 3, "statuses": ["time", "time", "time", "finished", "time", "time", "time", "time", "time", "time", "time", "time", "time", "time", "time", "time"]}

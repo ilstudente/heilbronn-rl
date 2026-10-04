@@ -1,0 +1,1 @@
+{"steps": 10, "instances": 4, "group": 8, "minutes": 4, "attempts": 5, "eval_n": 8, "eval_minutes": 5, "eval_attempts": 5, "lr": 4e-05, "lora_r": 16, "max_grad_norm": 1.0, "budget_usd": 9.5, "max_turn_tokens": 8192, "max_context": 32768, "nudges": 3, "seed": 0, "pilot": false, "model": "Qwen/Qwen3.8-27B", "rate_per_h": 7.583584}

@@ -1,0 +1,84 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hull GRPO Runs</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1d2327;--muted:#66707a;--line:#dcdad3;--a1:#2f6fdf;--a2:#16a07a;--a3:#b8489a;--warn:#c4402f;--base:#8a94a0}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--panel:#1b1f24;--ink:#e6e9ed;--muted:#98a2ad;--line:#2d333a;--a1:#6f9cf0;--a2:#3cc79b;--a3:#d77ac0;--warn:#e0705f;--base:#7d8793}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,sans-serif}
+header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end}
+h1{font-size:18px;margin:0 0 2px}header p{margin:0;color:var(--muted)}
+select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);margin-left:auto}
+main{padding:16px 20px;display:grid;gap:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.tile b{display:block;font-size:12px;color:var(--muted);font-weight:500}.tile span{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--a1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.panel h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+svg{width:100%;height:auto;display:block}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}td,th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:500;font-size:12px}tr.sel{background:color-mix(in srgb,var(--a1) 10%,transparent)}tr.click{cursor:pointer}
+.scroll{overflow:auto}.muted{color:var(--muted);font-size:12px}.warn{color:var(--warn)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+</style></head><body>
+<header><div><h1>Hull GRPO Runs</h1><p>Qwen3.8-27B LoRA · random axis hulls · eval: unit square, 16 points (record 7/341) · ilstudente</p></div>
+<select id="runs"></select></header>
+<main>
+<section class="tiles" id="tiles"></section>
+<section class="grid2">
+  <div class="panel"><h2>Eval: unit square, % of record</h2><svg id="eval" viewBox="0 0 600 170"></svg><div id="evalnote" class="muted"></div></div>
+  <div class="panel"><h2>Per-step trends</h2><div class="charts" id="charts"></div></div>
+</section>
+<section class="panel scroll"><h2>Steps <span class="muted">(click a row for its rollouts)</span></h2><table id="steps"></table></section>
+<section class="panel scroll"><h2 id="rtitle">Rollouts</h2><table id="rolls"></table></section>
+<p class="muted" id="sync"></p>
+</main>
+<script>
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';let run=null,sel=null,timer=null;
+function el(t,a,p,x){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;p&&p.appendChild(e);return e}
+const REC=7/341,f=(v,d=2)=>v==null?'—':(+v).toFixed(d);
+function tiles(st){const c=st.config,m=st.metrics,last=m.at(-1)||{},steps=m.filter(e=>e.event==='step');
+  const spend=last.spend_usd??0,budget=c.budget_usd??0,done=m.some(e=>e.event==='done'),err=m.find(e=>/trainer_(died|error|timeout)/.test(e.event||''));
+  const state=err?`<span class="warn">${err.event}</span>`:done?'done':(last.event??'starting');
+  $('tiles').innerHTML=[
+   ['spend',`$${f(spend)} <small class="muted">/ $${f(budget,1)}</small><div class="bar"><i style="width:${Math.min(100,100*spend/(budget||1))}%"></i></div>`],
+   ['state',state],['steps done',steps.length],
+   ['elapsed',`${Math.round((last.t??0)/60)} min`],
+   ['episode',`${c.minutes??'?'} min · ${c.attempts??'?'} attempts`],
+   ['resumed from',c.resume?c.resume.split('/').slice(-3).join('/'):'fresh LoRA']
+  ].map(([k,v])=>`<div class="tile"><b>${k}</b><span>${v}</span></div>`).join('')}
+function evalPanel(st){const g=$('eval');g.replaceChildren();const ev=st.metrics.filter(e=>e.event==='eval');
+  const x=v=>60+v/100*520;[0,25,50,75,100].forEach(v=>{el('line',{x1:x(v),x2:x(v),y1:10,y2:140,stroke:'var(--line)'},g);el('text',{x:x(v),y:158,'text-anchor':'middle','font-size':11,fill:'var(--muted)'},g,v+'%')});
+  ev.forEach((e,i)=>{const y=40+i*60,col=e.tag==='eval_base'?'var(--base)':'var(--a1)';el('text',{x:4,y:y+4,'font-size':12,fill:'var(--ink)'},g,e.tag==='eval_base'?'base':'trained');
+    const seen={};(e.pct_of_record||[]).forEach(p=>{const k=Math.round(p),j=seen[k]=(seen[k]||0)+1;el('circle',{cx:x(p)+(j>1?(j%2?1:-1)*Math.ceil((j-1)/2)*4:0),cy:y,r:4,fill:col,opacity:.8},g)});
+    el('line',{x1:x(e.mean),x2:x(e.mean),y1:y-18,y2:y+22,stroke:col,'stroke-width':2},g);el('text',{x:x(e.mean)+4,y:y+22,'font-size':11,fill:col},g,`mean ${f(e.mean,1)}`)});
+  $('evalnote').textContent=ev.length?ev.map(e=>`${e.tag==='eval_base'?'base':'trained'}: mean ${f(e.mean,1)} · median ${f(e.median,1)} · best ${f(e.best,1)} · n=${(e.pct_of_record||[]).length} · invalid ${e.invalid}`).join('   |   '):'no eval yet'}
+function chart(title,pts,col){const d=document.createElement('div');const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 280 120');d.innerHTML=`<div class="muted">${title}</div>`;d.appendChild(s);
+  if(!pts.length)return d;const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),lo=Math.min(0,...ys),hi=Math.max(...ys)*1.1||1;
+  const X=v=>20+(v-Math.min(...xs))/Math.max(1,Math.max(...xs)-Math.min(...xs))*245,Y=v=>105-(v-lo)/(hi-lo)*90;
+  el('line',{x1:20,x2:265,y1:105,y2:105,stroke:'var(--line)'},s);el('text',{x:2,y:Y(hi/1.1)+4,'font-size':10,fill:'var(--muted)'},s,f(hi/1.1,hi>10?0:2));
+  el('polyline',{points:pts.map(p=>`${X(p[0])},${Y(p[1])}`).join(' '),fill:'none',stroke:col,'stroke-width':2},s);
+  pts.forEach(p=>{el('circle',{cx:X(p[0]),cy:Y(p[1]),r:3,fill:col},s);el('text',{x:X(p[0]),y:118,'text-anchor':'middle','font-size':9,fill:'var(--muted)'},s,p[0])});return d}
+function charts(st){const S=st.metrics.filter(e=>e.event==='step');const c=$('charts');c.replaceChildren(
+  chart('attempts per rollout',S.map(e=>[e.step,e.mean_attempts]),'var(--a1)'),
+  chart('rollouts with no attempt (of 32)',S.map(e=>[e.step,e.no_attempt]),'var(--warn)'),
+  chart('invalid attempts',S.map(e=>[e.step,e.invalid]),'var(--a3)'),
+  chart('generated tokens per rollout',S.map(e=>[e.step,e.mean_gen_tokens]),'var(--a2)'))}
+function steps(st){const S=st.metrics.filter(e=>e.event==='step');
+  $('steps').innerHTML='<tr><th>step</th><th>instances (n,k)</th><th>attempts/rollout</th><th>no attempt</th><th>invalid</th><th>groups w/ signal</th><th>trained samples</th><th>gen tokens</th><th>step min</th><th>train min</th><th>peak GiB</th><th>spend</th></tr>'+
+  S.map(e=>`<tr class="click ${sel===`step${String(e.step).padStart(3,'0')}`?'sel':''}" data-tag="step${String(e.step).padStart(3,'0')}"><td>${e.step}</td><td>${(e.instances||[]).map(i=>`(${i[0]},${i[1]})`).join(' ')}</td><td>${f(e.mean_attempts)}</td><td>${e.no_attempt}</td><td>${e.invalid}</td><td>${e.groups_with_signal}</td><td>${e.samples}</td><td>${e.mean_gen_tokens??'—'}</td><td>${f((e.step_seconds??0)/60,1)}</td><td>${f((e.train_seconds??0)/60,1)}</td><td>${e.peak_gib??'—'}</td><td>$${f(e.spend_usd)}</td></tr>`).join('');
+  document.querySelectorAll('#steps tr.click').forEach(r=>r.onclick=()=>{sel=r.dataset.tag;render(window._st)})}
+function rolls(st){const tags=Object.keys(st.rollouts);if(!sel||!st.rollouts[sel])sel=tags.filter(t=>t.startsWith('step')).at(-1)||tags.at(-1);
+  const R=st.rollouts[sel]||[];$('rtitle').textContent=`Rollouts · ${sel??'—'} (${R.length})`;
+  $('rolls').innerHTML='<tr><th>#</th><th>n,k</th><th>status</th><th>attempts</th><th>best</th><th>'+(sel?.startsWith('eval')?'% of record':'curve')+'</th><th>invalid</th><th>dup</th><th>turns</th><th>tool calls</th><th>gen tokens</th><th>sec</th></tr>'+
+  R.map((r,i)=>{const t=r.terms||{};return `<tr><td>${i+1}</td><td>${r.instance?.n},${r.instance?.k}</td><td>${r.status}</td><td>${t.attempts??(r.attempts||[]).length}</td><td>${t.best?t.best.toExponential(3):'0'}</td><td>${sel?.startsWith('eval')?f(100*(t.best||0)/REC,1)+'%':(t.curve?t.curve.toExponential(2):'0')}</td><td>${t.invalid??0}</td><td>${t.dup??0}</td><td>${r.turns}</td><td>${r.tool_calls}</td><td>${r.gen_tokens}</td><td>${r.seconds}</td></tr>`}).join('')}
+function render(st){window._st=st;tiles(st);evalPanel(st);charts(st);steps(st);rolls(st);
+  const s=st.status||{};$('sync').textContent=(s.last_sync?`synced from Modal volume hull-grpo ${Math.round(Date.now()/1000-s.last_sync)} s ago`:'first sync in progress…')+(s.error?` · sync error: ${s.error}`:'')}
+async function poll(){if(!run)return;const r=await fetch('/api/run?name='+run);if(r.ok)render(await r.json())}
+async function loadRuns(){const j=await(await fetch('/api/runs')).json();const cur=$('runs').value;
+  $('runs').replaceChildren(...j.runs.map(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;return o}));
+  if(!run&&j.runs.length){run=j.runs[0]}$('runs').value=run||cur;if(!j.runs.length)$('sync').textContent='first sync in progress…'}
+$('runs').onchange=e=>{run=e.target.value;sel=null;poll()};
+loadRuns().then(poll);setInterval(()=>{loadRuns();poll()},15000);
+</script></body></html>

@@ -1,0 +1,100 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hull Heilbronn Lab</title>
+<style>
+:root{--bg:#f6f5f1;--panel:#fff;--ink:#1d2327;--muted:#66707a;--line:#dcdad3;--hull:#eef1f4;--hullstroke:#7b8794;--pt:#1d2327;--tri:#e07a2e;
+--a1:#2f6fdf;--a2:#16a07a;--a3:#b8489a;--ok:#16a07a;--bad:#c4402f}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--panel:#1b1f24;--ink:#e6e9ed;--muted:#98a2ad;--line:#2d333a;--hull:#222830;--hullstroke:#7d8a99;--pt:#e6e9ed;--tri:#f09a52;--a1:#6f9cf0;--a2:#3cc79b;--a3:#d77ac0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,-apple-system,sans-serif}
+header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end}
+h1{font-size:18px;margin:0 0 2px}header p{margin:0;color:var(--muted)}
+form{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-left:auto}
+label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:3px}
+input,select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);width:84px}
+button{font:inherit;padding:7px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}button:disabled{opacity:.5;cursor:default}
+main{padding:16px 20px;display:grid;gap:16px}
+.top{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.panel h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.agents{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.agent h3{margin:0;font-size:15px;display:flex;gap:8px;align-items:center}.dot{width:10px;height:10px;border-radius:50%}
+.score{font-variant-numeric:tabular-nums;font-size:22px;font-weight:600;margin:4px 0 0}.sub{color:var(--muted);font-size:12px}
+svg{width:100%;height:auto;display:block}
+.log{height:300px;overflow:auto;border-top:1px solid var(--line);margin-top:10px;padding-top:8px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.log div{margin:0 0 6px;white-space:pre-wrap;word-break:break-word}.k-tool{color:var(--a1)}.k-out{color:var(--muted)}.k-result{font-weight:600}.k-sub{color:var(--ok)}.k-bad{color:var(--bad)}
+pre{white-space:pre-wrap;font:12px/1.4 ui-monospace,Menlo,monospace;margin:0;max-height:220px;overflow:auto;color:var(--muted)}
+.status{font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}td,th{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:500;font-size:12px}.k-think{color:var(--muted);font-style:italic}.k-resume{color:var(--a3);font-weight:600}.k-post{color:var(--a1);font-weight:600}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px}.kv b{font-weight:500;color:var(--muted)}
+@media (max-width:900px){.top,.agents{grid-template-columns:1fr}form{margin-left:0}}
+</style></head><body>
+<header><div><h1>Hull Heilbronn Lab</h1><p>Random axis hull in R<sup>n</sup> · k points · 3 isolated agents on one instance · 10 exact attempts each · exact grading</p></div>
+<form id="f"><label>problem<select id="domain" style="width:150px"><option value="hull">Random axis hull</option><option value="square">Unit square (classic)</option></select></label><label>n (dim)<input id="n" type="number" min="2" max="4" value="2"></label><label>k (points)<input id="k" type="number" min="3" max="30" value="8"></label>
+<label>seed<input id="seed" type="number" placeholder="random"></label><label>minutes<input id="minutes" type="number" min="1" max="30" value="5"></label>
+<label>agent<select id="agent" style="width:120px"><option value="claude">Claude</option><option value="qwen">Qwen (Modal)</option></select></label><label>model<input id="model" placeholder="default" style="width:110px"></label>
+<button type="button" id="preview">Preview hull</button><button class="primary" id="go">Start 3 agents</button><button type="button" id="stop" disabled>Stop</button>
+<label>run<select id="runs" style="width:210px"></select></label></form></header>
+<main>
+<section class="top"><div class="panel"><h2>Instance <span class="sub">(same hull for all 3 agents)</span></h2><svg id="hull" viewBox="0 0 320 320"></svg><div class="kv" id="info"></div></div>
+<div class="panel"><h2>Best attempt over time <span id="status" class="status">idle</span></h2><svg id="chart" viewBox="0 0 640 220"></svg><h2 style="margin-top:10px">Results &amp; reward <span class="sub">(agents are isolated · 10 attempts each)</span></h2><table id="board"></table><h2 style="margin-top:10px">Prompt given to each agent</h2><pre id="prompt">—</pre></div></section>
+<section class="agents" id="agents"></section>
+</main>
+<script>
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg',COL=['var(--a1)','var(--a2)','var(--a3)'];
+let run=null,timer=null;
+function el(tag,attrs,parent,text){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(text!=null)e.textContent=text;parent&&parent.appendChild(e);return e}
+const frac=s=>{const [a,b]=String(s).split('/');return b?(+a)/(+b):+a};
+function frame(inst,svg,size){ // map first two coordinates of the hull into the svg
+  if(inst.kind==='square'){const m=14,W=size-2*m,P=([x,y])=>[m+W*x,m+W*(1-y)];
+    el('polygon',{points:[[0,0],[1,0],[1,1],[0,1]].map(P).map(p=>p.join(',')).join(' '),fill:'var(--hull)',stroke:'var(--hullstroke)','stroke-width':1.2},svg);return P}
+  const neg=inst.neg.map(frac),pos=inst.pos.map(frac),m=14,W=size-2*m,sx=W/(neg[0]+pos[0]),sy=W/(neg[1]+pos[1]),s=Math.min(sx,sy);
+  const ox=m+(W-s*(neg[0]+pos[0]))/2+s*neg[0],oy=m+(W-s*(neg[1]+pos[1]))/2+s*pos[1];
+  const P=([x,y])=>[ox+s*x,oy-s*y];const hull=[[pos[0],0],[0,pos[1]],[-neg[0],0],[0,-neg[1]]].map(P);
+  el('polygon',{points:hull.map(p=>p.join(',')).join(' '),fill:'var(--hull)',stroke:'var(--hullstroke)','stroke-width':1.2},svg);
+  el('line',{x1:P([-neg[0],0])[0],y1:P([0,0])[1],x2:P([pos[0],0])[0],y2:P([0,0])[1],stroke:'var(--line)'},svg);
+  el('line',{x1:P([0,0])[0],y1:P([0,-neg[1]])[1],x2:P([0,0])[0],y2:P([0,pos[1]])[1],stroke:'var(--line)'},svg);return P}
+function drawInstance(inst){const g=$('hull');g.replaceChildren();frame(inst,g,320);
+  if(inst.kind==='square'){$('info').innerHTML=`<b>problem</b><span>classic Heilbronn · unit square</span><b>k</b><span>${inst.k} points</span><b>record</b><span>${inst.record??'—'}${inst.record?` ≈ ${frac(inst.record).toFixed(6)}`:''}</span><b>subsets</b><span>${binom(inst.k,3)} triangles</span>`;return}
+  const n=inst.n;$('info').innerHTML=`<b>n, k</b><span>${n}, ${inst.k} · seed ${inst.seed}</span><b>−axis</b><span>${inst.neg.join(', ')}</span><b>+axis</b><span>${inst.pos.join(', ')}</span><b>vol(P)</b><span>${inst.volume}</span><b>subsets</b><span>${binom(inst.k,n+1)} simplices</span>`+(n>2?`<b>view</b><span>projection onto x₁,x₂ (outline = hull's shadow)</span>`:'')}
+const binom=(a,b)=>{let r=1;for(let i=1;i<=b;i++)r=r*(a-b+i)/i;return Math.round(r)};
+function drawPoints(inst,svg,best,color){svg.replaceChildren();const P=frame(inst,svg,300);if(!best)return;const xy=best.xy.map(P);
+  if(inst.n===2)for(const t of best.argmin)el('polygon',{points:t.map(i=>xy[i].join(',')).join(' '),fill:'color-mix(in srgb,var(--tri) 25%,transparent)',stroke:'var(--tri)','stroke-width':1.2},svg);
+  xy.forEach(p=>el('circle',{cx:p[0],cy:p[1],r:4,fill:color,stroke:'var(--panel)','stroke-width':1},svg))}
+function drawChart(st){const c=$('chart');c.replaceChildren();const T=st.meta.minutes*60,ref=st.meta.reference_score;
+  const all=st.agents.flatMap(a=>a.records.filter(s=>s.valid).map(s=>s.score));const hi=Math.max(ref,...all,1e-9)*1.1;
+  const x=t=>40+Math.min(t,T)/T*585,y=v=>195-v/hi*180;
+  for(let i=0;i<=4;i++){const v=hi*i/4;el('line',{x1:40,x2:625,y1:y(v),y2:y(v),stroke:'var(--line)'},c);el('text',{x:36,y:y(v)+4,'text-anchor':'end','font-size':10,fill:'var(--muted)'},c,v.toPrecision(2))}
+  el('line',{x1:40,x2:625,y1:y(ref),y2:y(ref),stroke:'var(--muted)','stroke-dasharray':'4 4'},c);el('text',{x:625,y:y(ref)-4,'text-anchor':'end','font-size':10,fill:'var(--muted)'},c,'best of 200 random');
+  el('text',{x:40,y:214,'font-size':10,fill:'var(--muted)'},c,'0');el('text',{x:625,y:214,'text-anchor':'end','font-size':10,fill:'var(--muted)'},c,st.meta.minutes+' min');
+  const now=Math.min(T,st.now-st.meta.started);
+  st.agents.forEach((a,i)=>{let b=0,pts=[[x(0),y(0)]];for(const s of a.records)if(s.valid&&s.score>b){pts.push([x(s.t),y(b)]);b=s.score;pts.push([x(s.t),y(b)])}
+    pts.push([x(now),y(b)]);el('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:COL[i],'stroke-width':2},c);
+    for(const s of a.records)if(s.valid)el('circle',{cx:x(s.t),cy:y(s.score),r:2.5,fill:COL[i],opacity:.45},c)})}
+function agentCard(i){const d=document.createElement('div');d.className='panel agent';d.innerHTML=`<h3><span class="dot" style="background:${COL[i]}"></span>Agent ${i+1} <span class="status" id="as${i}">—</span></h3>
+  <div class="score" id="sc${i}">—</div><div class="sub" id="ss${i}"></div><svg id="ag${i}" viewBox="0 0 300 300"></svg><div class="log" id="lg${i}"></div>`;return d}
+function render(st){const inst=st.meta.instance;drawInstance(inst);$('prompt').textContent=st.prompt;
+  const el0=Math.round(st.now-st.meta.started);$('status').textContent=st.ended?(st.stopped?'stopped':st.deadline_hit?'time limit reached':'finished'):`running · ${el0}s / ${st.meta.minutes*60}s`;
+  $('stop').disabled=st.ended;drawChart(st);
+  const res=st.agents.map(a=>({a,w:a.reward})).sort((p,q)=>q.w.reward-p.w.reward),f=v=>v.toFixed(8);
+  $('board').innerHTML='<tr><th>#</th><th>agent</th><th>best (min)</th><th>+ tie-break</th><th>curve</th><th>wasted</th><th>reward r</th><th>advantage</th></tr>'+res.map(({a,w},j)=>`<tr><td>${j+1}</td><td><span class="dot" style="display:inline-block;background:${COL[a.id-1]}"></span> Agent ${a.id}</td><td>${f(w.best)}</td><td>${w.bonus.toExponential(2)}</td><td>${f(w.curve)}</td><td>${w.invalid+w.dup}${w.invalid+w.dup?` (${w.invalid} inv, ${w.dup} dup)`:''}</td><td>${w.reward.toFixed(4)}</td><td>${w.advantage>0?'+':''}${w.advantage.toFixed(2)}</td></tr>`).join('')+
+    `<tr><td colspan="8" class="sub">r = ${st.reward_weights.final}·final/M + ${st.reward_weights.curve}·curve/M − ${st.reward_weights.penalty}·wasted · M = group's best final · final = best + tie-break (≤ ${st.reward_weights.tie_cap}·best) · curve = mean best-so-far over 10 attempt slots · advantage = (r − mean)/max(std, 0.001), near-ties → 0</td></tr>`;
+  st.agents.forEach((a,i)=>{const b=a.best_attempt;$('as'+i).textContent=(a.alive?'running':'idle')+` · turn ${a.turns}`;
+    $('sc'+i).textContent=b?b.score.toFixed(6):'—';
+    $('ss'+i).textContent=`best attempt · ${a.attempts}/${st.meta.rules?.attempts??10} attempts used`+(b&&inst.record?` · ${(100*b.score/frac(inst.record)).toFixed(1)}% of record`:'')+` · reward ${a.reward.reward.toFixed(4)} · advantage ${a.reward.advantage.toFixed(2)}`+(b?` · ${(b.score/st.meta.reference_score).toFixed(2)}× random ref`:'');
+    drawPoints(inst,$('ag'+i),b,COL[i]);
+    const lg=$('lg'+i),stick=lg.scrollTop+lg.clientHeight>=lg.scrollHeight-20;lg.replaceChildren();
+    const items=[...a.events.map(e=>({...e})),...a.records.map(s=>({kind:s.valid?'sub':'bad',text:'▲ attempt '+`@${s.t}s → `+(s.valid?s.score.toFixed(8):s.error)+(s.dup?` [${s.dup}]`:'')}))];
+    for(const e of items){const d=document.createElement('div');d.className='k-'+e.kind;d.textContent=(e.kind==='tool'?'$ ':e.kind==='out'?'  ':'')+e.text+(e.cost!=null?` · $${e.cost.toFixed(2)}`:'');lg.appendChild(d)}
+    if(stick)lg.scrollTop=lg.scrollHeight})}
+async function poll(){if(!run)return;const r=await fetch('/api/state?run='+run);if(r.ok){const st=await r.json();render(st);if(st.ended){clearInterval(timer);timer=null;loadRuns()}}}
+function follow(id){run=id;$('agents').replaceChildren(...[0,1,2].map(agentCard));clearInterval(timer);poll();timer=setInterval(poll,2000)}
+async function loadRuns(){const r=await(await fetch('/api/runs')).json();$('runs').replaceChildren(...r.map(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=`${x.id.slice(9,15)} n=${x.n} k=${x.k}${x.ended?'':' •'}`;return o}));if(run)$('runs').value=run}
+$('runs').onchange=e=>follow(e.target.value);
+$('agent').onchange=e=>{$('minutes').value=e.target.value==='qwen'?15:5};
+$('domain').onchange=e=>{const sq=e.target.value==='square';$('n').value=2;$('n').disabled=sq;$('seed').disabled=sq;if(sq)$('k').value=16;$('preview').click()};
+$('preview').onclick=async()=>{run=null;clearInterval(timer);timer=null;$('agents').replaceChildren();$('chart').replaceChildren();$('status').textContent='preview (not started)';$('runs').value='';if($('seed').value==='')$('seed').value=Math.floor(Math.random()*1e6);const r=await fetch(`/api/preview?n=${$('n').value}&k=${$('k').value}&seed=${$('seed').value}&minutes=${$('minutes').value}&domain=${$('domain').value}`);const j=await r.json();if(!r.ok)return alert(j.error);drawInstance(j.instance);$('prompt').textContent=j.prompt};
+$('f').onsubmit=async e=>{e.preventDefault();$('go').disabled=true;const r=await fetch('/api/start',{method:'POST',body:JSON.stringify({domain:$('domain').value,n:+$('n').value,k:+$('k').value,seed:$('seed').value,minutes:+$('minutes').value,model:$('model').value,agent:$('agent').value})});
+  const j=await r.json();$('go').disabled=false;if(!r.ok)return alert(j.error);await loadRuns();follow(j.run)};
+$('stop').onclick=()=>fetch('/api/stop',{method:'POST',body:JSON.stringify({run})});
+loadRuns().then(()=>{const o=$('runs').options[0];if(o)follow(o.value);else $('preview').click()});
+</script></body></html>
